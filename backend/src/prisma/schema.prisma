@@ -1,0 +1,122 @@
+generator clinet {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider          = "mysql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+model days {
+  dateid                       Int               @id @default(autoincrement())
+  roundid1                     Int?
+  roundid2                     Int?
+  status                       String?           @db.VarChar(20)
+  maxuser                      Int?
+  date                         DateTime?         @unique(map: "date") @db.Date
+  starttime                    DateTime?         @db.Time(0)
+  endtime                      DateTime?         @db.Time(0)
+  rounds_days_roundid1Torounds rounds?           @relation("days_roundid1Torounds", fields: [roundid1], references: [roundid], onDelete: Restrict, onUpdate: Restrict, map: "days_ibfk_1")
+  rounds_days_roundid2Torounds rounds?           @relation("days_roundid2Torounds", fields: [roundid2], references: [roundid], onDelete: Restrict, onUpdate: Restrict, map: "days_ibfk_2")
+  history_booking              history_booking[]
+
+  @@index([roundid1], map: "roundid")
+  @@index([roundid2], map: "roundid2")
+}
+
+model history_booking {
+  historyid     Int       @id @default(autoincrement())
+  datetime      DateTime? @default(now()) @db.DateTime(0)
+  studentid     Int?
+  bookingdateid Int?
+  status        String?   @db.VarChar(20)
+  type          Int?      @db.TinyInt
+  days          days?     @relation(fields: [bookingdateid], references: [dateid], onDelete: Restrict, onUpdate: Restrict, map: "history_booking_ibfk_2")
+  users         users?    @relation(fields: [studentid], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "history_booking_ibfk_1")
+
+  @@index([bookingdateid], map: "bookingdateid")
+  @@index([studentid], map: "studentid")
+}
+
+model history_queue {
+  historyid Int       @id @default(autoincrement())
+  datetime  DateTime? @default(now()) @db.DateTime(0)
+  studentid Int?
+  queueid   Int?
+  type      Int?      @db.TinyInt
+  channel   Int?      @db.TinyInt
+  status    String?   @db.VarChar(20)
+  star_rate String?   @db.VarChar(11)
+  users     users?    @relation(fields: [studentid], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "history_queue_ibfk_1")
+
+  @@index([queueid], map: "queueid")
+  @@index([studentid], map: "studentid")
+}
+
+model list_of_round {
+  Listid                             Int            @id @default(autoincrement())
+  Document_Amendment_Submission_Date String?        @db.VarChar(20)
+  year                               Int?           @db.Year
+  semester                           Int?           @db.TinyInt
+  rounds                             rounds[]
+  web_settings                       web_settings[]
+}
+
+model queues {
+  queueid   Int       @id @default(autoincrement())
+  queue_no  String?   @db.VarChar(6)
+  time      DateTime? @default(now()) @db.Time(0)
+  studentid Int?
+  type      Int?      @db.TinyInt
+  channel   Int?      @db.TinyInt
+  status    String?   @db.VarChar(20)
+  users     users?    @relation(fields: [studentid], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "queues_ibfk_1")
+
+  @@index([studentid], map: "studentid")
+}
+
+model rounds {
+  roundid                    Int            @id @default(autoincrement())
+  startdate                  DateTime?      @db.Date
+  enddate                    DateTime?      @db.Date
+  Listid                     Int?
+  roundnumber                Int?
+  type                       Int?           @db.TinyInt
+  status                     String?        @db.VarChar(20)
+  days_days_roundid1Torounds days[]         @relation("days_roundid1Torounds")
+  days_days_roundid2Torounds days[]         @relation("days_roundid2Torounds")
+  list_of_round              list_of_round? @relation(fields: [Listid], references: [Listid], onDelete: Restrict, onUpdate: Restrict, map: "rounds_ibfk_1")
+
+  @@index([Listid], map: "Listid")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model web_settings {
+  id             Int            @id @default(autoincrement())
+  web_status     String         @db.VarChar(20)
+  show_list      Int?
+  web_break_text String         @db.VarChar(50)
+  list_of_round  list_of_round? @relation(fields: [show_list], references: [Listid], onDelete: Restrict, onUpdate: Restrict, map: "web_settings_ibfk_1")
+
+  @@index([show_list], map: "show_list")
+}
+
+model users {
+  id              Int               @id @default(autoincrement())
+  email           String            @unique(map: "email") @db.VarChar(100)
+  studentid       String?           @unique(map: "studentid") @db.VarChar(10)
+  name            String?           @db.VarChar(100)
+  role            users_role        @default(STUDENT)
+  channel         Int?              @db.TinyInt
+  refresh         String?           @db.VarChar(1046)
+  history_booking history_booking[]
+  history_queue   history_queue[]
+  queues          queues[]
+}
+
+enum users_role {
+  STUDENT
+  ADMIN
+}
